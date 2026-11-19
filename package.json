@@ -1,0 +1,25 @@
+{
+  "name": "docme-monorepo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*"
+  ],
+  "scripts": {
+    "dev": "concurrently -n \"api,cms,web\" -c \"blue,green,magenta\" \"npm run dev:api\" \"npm run dev:cms\" \"npm run dev:web\"",
+    "dev:web": "npm run dev --workspace=@docme/web",
+    "dev:cms": "npm run dev --workspace=@docme/cms",
+    "dev:api": "npm run dev --workspace=@docme/api",
+    "build": "npm run build --workspaces --if-present",
+    "build:web": "npm run build --workspace=@docme/web",
+    "build:cms": "npm run build --workspace=@docme/cms",
+    "build:api": "npm run build --workspace=@docme/api",
+    "lint": "npm run lint --workspaces --if-present",
+    "prisma:generate": "prisma generate --schema=database/schema/schema.prisma",
+    "prisma:migrate": "prisma migrate dev --schema=database/schema/schema.prisma"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.6",
+    "pngjs": "^7.0.0"
+  }
+}

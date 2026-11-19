@@ -1,0 +1,128 @@
+// DocMe CMS Prisma Schema
+// PostgreSQL datasource with modular models
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+enum RoleType {
+  ADMIN
+  CONTENT_MANAGER
+}
+
+enum PublishingStatus {
+  DRAFT
+  IN_REVIEW
+  PUBLISHED
+  ARCHIVED
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        RoleType @unique
+  description String?
+  users       User[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("roles")
+}
+
+model User {
+  id              String           @id @default(uuid())
+  email           String           @unique
+  passwordHash    String
+  name            String
+  roleId          String
+  role            Role             @relation(fields: [roleId], references: [id])
+  isActive        Boolean          @default(true)
+  auditLogs       AuditLog[]
+  contentVersions ContentVersion[]
+  mediaAssets     MediaAsset[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@map("users")
+}
+
+model Page {
+  id          String           @id @default(uuid())
+  slug        String           @unique
+  title       String
+  description String?
+  isPublished Boolean          @default(false)
+  sections    Section[]
+  versions    ContentVersion[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@map("pages")
+}
+
+model Section {
+  id        String   @id @default(uuid())
+  pageId    String
+  page      Page     @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  key       String   // e.g. "hero", "about_video", "stats", "services"
+  name      String
+  type      String   // e.g. "HERO_BANNER", "VIDEO_SHOWCASE", "METRICS_GRID"
+  order     Int      @default(0)
+  content   Json     // structured JSON matching section component schema
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([pageId, key])
+  @@map("sections")
+}
+
+model ContentVersion {
+  id            String           @id @default(uuid())
+  pageId        String
+  page          Page             @relation(fields: [pageId], references: [id], onDelete: Cascade)
+  versionNumber Int
+  snapshot      Json             // Full page and sections snapshot
+  status        PublishingStatus @default(DRAFT)
+  authorId      String
+  author        User             @relation(fields: [authorId], references: [id])
+  publishedAt   DateTime?
+  changelog     String?
+  createdAt     DateTime         @default(now())
+
+  @@unique([pageId, versionNumber])
+  @@map("content_versions")
+}
+
+model MediaAsset {
+  id           String   @id @default(uuid())
+  filename     String   @unique
+  originalName String
+  mimeType     String
+  size         Int
+  url          String
+  altText      String?
+  uploadedById String
+  uploadedBy   User     @relation(fields: [uploadedById], references: [id])
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("media_assets")
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  action    String   // e.g. "LOGIN", "CREATE_PAGE", "PUBLISH_VERSION"
+  entity    String   // e.g. "Page", "Section", "MediaAsset"
+  entityId  String?
+  details   Json?
+  ipAddress String?
+  createdAt DateTime @default(now())
+
+  @@map("audit_logs")
+}
